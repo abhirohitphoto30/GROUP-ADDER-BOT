@@ -58,28 +58,13 @@ async def full_cleanup(user_id: int):
 
 async def get_admin_groups(user_client: TelegramClient):
     admin_groups = []
-    me = await user_client.get_me()
     async for dialog in user_client.iter_dialogs():
         entity = dialog.entity
-        if isinstance(entity, Channel):
-            try:
-                from telethon.tl.functions.channels import GetParticipantRequest
-                part = await user_client(GetParticipantRequest(entity, me))
-                if isinstance(part.participant, (ChannelParticipantAdmin, ChannelParticipantCreator)):
-                    admin_groups.append(entity)
-            except Exception:
-                pass
-        elif isinstance(entity, Chat):
-            try:
-                from telethon.tl.functions.messages import GetFullChatRequest
-                full = await user_client(GetFullChatRequest(entity.id))
-                for p in full.full_chat.participants.participants:
-                    if p.user_id == me.id:
-                        if isinstance(p, (ChatParticipantAdmin, ChatParticipantCreator)):
-                            admin_groups.append(entity)
-                        break
-            except Exception:
-                pass
+        if isinstance(entity, (Channel, Chat)):
+            is_creator = getattr(entity, 'creator', False)
+            has_admin_rights = getattr(entity, 'admin_rights', None) is not None
+            if is_creator or has_admin_rights:
+                admin_groups.append(entity)
     return admin_groups
 
 
